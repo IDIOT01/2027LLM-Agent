@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "target_role": "LLM应用算法工程师",
+    "created": "2026-06-07",
+    "keywords": ["大模型算法", "LLM算法", "NLP算法", "RLHF", "对齐算法", "RAG算法", "Agent算法", "大模型应用"],
+    "exclude_keywords": ["多模态", "基座模型", "预训练", "foundation", "视觉", "语音"]
+  },
+  "companies": [
+    {"name": "字节跳动", "tier": "S", "category": "互联网大厂", "aliases": ["ByteDance", "抖音"]},
+    {"name": "腾讯", "tier": "S", "category": "互联网大厂", "aliases": ["Tencent"]},
+    {"name": "阿里巴巴", "tier": "S", "category": "互联网大厂", "aliases": ["阿里", "Alibaba", "达摩院", "通义"]},
+    {"name": "百度", "tier": "S", "category": "互联网大厂", "aliases": ["Baidu", "文心"]},
+    {"name": "美团", "tier": "S", "category": "互联网大厂", "aliases": ["Meituan"]},
+    {"name": "快手", "tier": "A", "category": "互联网大厂", "aliases": ["Kuaishou"]},
+    {"name": "华为", "tier": "A", "category": "互联网大厂", "aliases": ["Huawei", "华为云"]},
+    {"name": "小红书", "tier": "A", "category": "互联网大厂", "aliases": ["REDnote"]},
+    {"name": "拼多多", "tier": "A", "category": "互联网大厂", "aliases": ["PDD", "Temu"]},
+    {"name": "京东", "tier": "A", "category": "互联网大厂", "aliases": ["JD"]},
+    {"name": "网易", "tier": "A", "category": "互联网大厂", "aliases": ["NetEase"]},
+    {"name": "蚂蚁集团", "tier": "A", "category": "互联网大厂", "aliases": ["蚂蚁金服", "支付宝"]},
+    {"name": "滴滴", "tier": "B", "category": "互联网大厂", "aliases": ["DiDi"]},
+
+    {"name": "DeepSeek", "tier": "S", "category": "AI公司", "aliases": ["深度求索"]},
+    {"name": "智谱AI", "tier": "A", "category": "AI公司", "aliases": ["Zhipu", "GLM", "ChatGLM"]},
+    {"name": "月之暗面", "tier": "A", "category": "AI公司", "aliases": ["Moonshot", "Kimi"]},
+    {"name": "MiniMax", "tier": "A", "category": "AI公司", "aliases": ["稀宇科技"]},
+    {"name": "百川智能", "tier": "A", "category": "AI公司", "aliases": ["Baichuan"]},
+    {"name": "阶跃星辰", "tier": "A", "category": "AI公司", "aliases": ["StepFun"]},
+    {"name": "零一万物", "tier": "B", "category": "AI公司", "aliases": ["01.AI"]},
+    {"name": "面壁智能", "tier": "B", "category": "AI公司", "aliases": ["ModelBest"]},
+    {"name": "昆仑万维", "tier": "B", "category": "AI公司", "aliases": ["Kunlun"]},
+
+    {"name": "360", "tier": "B", "category": "中大型互联网", "aliases": ["三六零", "奇虎"]},
+    {"name": "腾讯音乐", "tier": "B", "category": "中大型互联网", "aliases": ["TME"]},
+    {"name": "B站", "tier": "B", "category": "中大型互联网", "aliases": ["哔哩哔哩", "Bilibili"]},
+    {"name": "携程", "tier": "B", "category": "中大型互联网", "aliases": ["Trip.com", "Ctrip"]},
+    {"name": "58同城", "tier": "B", "category": "中大型互联网", "aliases": ["58"]},
+    {"name": "贝壳找房", "tier": "B", "category": "中大型互联网", "aliases": ["贝壳", "KE"]},
+    {"name": "微博", "tier": "B", "category": "中大型互联网", "aliases": ["新浪微博", "Weibo"]},
+    {"name": "知乎", "tier": "B", "category": "中大型互联网", "aliases": ["Zhihu"]},
+    {"name": "得物", "tier": "B", "category": "中大型互联网", "aliases": ["毒", "Poizon"]},
+    {"name": "SHEIN", "tier": "B", "category": "中大型互联网", "aliases": ["希音"]},
+    {"name": "米哈游", "tier": "B", "category": "中大型互联网", "aliases": ["miHoYo", "HoYoverse"]},
+    {"name": "搜狐", "tier": "C", "category": "中大型互联网", "aliases": ["Sohu"]},
+
+    {"name": "OPPO", "tier": "B", "category": "手机/硬件", "aliases": ["OPPO研究院"]},
+    {"name": "vivo", "tier": "B", "category": "手机/硬件", "aliases": ["vivo AI"]},
+    {"name": "荣耀", "tier": "B", "category": "手机/硬件", "aliases": ["Honor"]},
+    {"name": "小米", "tier": "B", "category": "手机/硬件", "aliases": ["Xiaomi"]},
+    {"name": "联想", "tier": "B", "category": "手机/硬件", "aliases": ["Lenovo"]},
+
+    {"name": "中国移动", "tier": "B", "category": "国企/运营商", "aliases": ["山东移动", "中移动"], "region_priority": "山东"},
+    {"name": "中国联通", "tier": "B", "category": "国企/运营商", "aliases": ["山东联通", "中联通"], "region_priority": "山东"},
+    {"name": "中国电信", "tier": "B", "category": "国企/运营商", "aliases": ["山东电信", "中电信"], "region_priority": "山东"},
+    {"name": "浪潮集团", "tier": "B", "category": "国企/运营商", "aliases": ["Inspur"], "region_priority": "山东"},
+    {"name": "中国银联", "tier": "B", "category": "国企/运营商", "aliases": ["UnionPay"]},
+
+    {"name": "商汤科技", "tier": "B", "category": "其他", "aliases": ["SenseTime"]},
+    {"name": "旷视科技", "tier": "B", "category": "其他", "aliases": ["Megvii", "Face++"]},
+    {"name": "科大讯飞", "tier": "B", "category": "其他", "aliases": ["iFlytek"]}
+  ]
+}
