@@ -183,6 +183,35 @@ def cmd_gmail_auth():
     gmail_auth()
 
 
+IS_WINDOWS = sys.platform == "win32"
+IS_MACOS = sys.platform == "darwin"
+
+
+def _schedule_on(h, m):
+    scripts = PROJECT_ROOT / "scripts"
+    if IS_WINDOWS:
+        subprocess.run([str(scripts / "setup_schedule.bat"), h, m], shell=True)
+    elif IS_MACOS:
+        subprocess.run(["bash", str(scripts / "setup_schedule.sh"), h, m])
+    else:
+        # Linux: use crontab
+        entry = f"{m} {h} * * * cd {PROJECT_ROOT} && {sys.executable} launcher.py run --lite"
+        subprocess.run(f'(crontab -l 2>/dev/null | grep -v "launcher.py"; echo "{entry}") | crontab -',
+                       shell=True)
+        print(f"[OK] crontab 已添加: {h}:{m}")
+
+
+def _schedule_off():
+    if IS_WINDOWS:
+        subprocess.run(["schtasks", "/delete", "/tn", "QiuzhaoAgent", "/f"], capture_output=True)
+    elif IS_MACOS:
+        plist = Path.home() / "Library/LaunchAgents" / f"com.{os.environ.get('USER','user')}.qiuzhao-agent.plist"
+        subprocess.run(["launchctl", "unload", str(plist)], capture_output=True)
+    else:
+        subprocess.run('crontab -l 2>/dev/null | grep -v "launcher.py" | crontab -', shell=True)
+    print("[OK] 定时任务已关闭")
+
+
 def cmd_schedule(args):
     sched = cfg.get_schedule_config()
 
@@ -190,14 +219,12 @@ def cmd_schedule(args):
         sched["enabled"] = True
         cfg.save_schedule_config(sched)
         h, m = sched["time"].split(":")
-        subprocess.run(["bash", str(PROJECT_ROOT / "scripts" / "setup_schedule.sh"), h, m])
+        _schedule_on(h, m)
 
     elif "--off" in args:
         sched["enabled"] = False
         cfg.save_schedule_config(sched)
-        plist = Path.home() / "Library/LaunchAgents" / f"com.{os.environ.get('USER','user')}.qiuzhao-agent.plist"
-        subprocess.run(["launchctl", "unload", str(plist)], capture_output=True)
-        print("[OK] 定时任务已关闭")
+        _schedule_off()
 
     elif "--time" in args:
         idx = args.index("--time")
@@ -207,9 +234,10 @@ def cmd_schedule(args):
             print(f"[OK] 执行时间: {sched['time']}")
             if sched["enabled"]:
                 h, m = sched["time"].split(":")
-                subprocess.run(["bash", str(PROJECT_ROOT / "scripts" / "setup_schedule.sh"), h, m])
+                _schedule_on(h, m)
     else:
-        print(f"定时: {'已启用' if sched['enabled'] else '未启用'} | {sched['time']} | {sched['mode']}")
+        platform = "Windows" if IS_WINDOWS else "macOS" if IS_MACOS else "Linux"
+        print(f"定时: {'已启用' if sched['enabled'] else '未启用'} | {sched['time']} | {sched['mode']} | {platform}")
         print(f"邮箱: {'开' if sched['email'] else '关'} | 推送: {'开' if sched['push'] else '关'}")
         print("\n  --on / --off / --time HH:MM")
 

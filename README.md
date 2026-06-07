@@ -1,6 +1,8 @@
 # 2027 秋招 LLM应用算法 — 自动信息收集 Agent
 
 > 自动抓取各大公司校招信息 → LLM 智能分析匹配度 → Excel 跟踪表 → 每日播报 → 微信推送 → Gmail 监控
+>
+> **跨平台支持：macOS / Windows / Linux**
 
 ## 运行成本
 
@@ -59,10 +61,17 @@
 git clone https://github.com/IDIOT01/2027LLM-Agent.git
 cd 2027LLM-Agent
 
+# macOS / Linux
 pip3 install openpyxl pyyaml
-# 可选：完整抓取需要 Playwright
+
+# Windows（cmd 或 PowerShell）
+pip install openpyxl pyyaml
+
+# 可选：完整抓取需要 Playwright（跨平台）
 pip3 install playwright && python3 -m playwright install chromium
 ```
+
+> **Windows 用户提示：** 下文的 `python3` 命令在 Windows 上可能需要用 `python` 替代。
 
 ### 2. 配置
 
@@ -259,21 +268,26 @@ proxy:
 }
 ```
 
-### 定时执行（macOS）
+### 定时执行（macOS / Windows / Linux）
 
 ```bash
-# 开启（默认每天 09:00）
-python3 launcher.py schedule --on
-
-# 改时间
-python3 launcher.py schedule --time 08:30
-
-# 关闭
-python3 launcher.py schedule --off
-
-# 查看状态
-python3 launcher.py schedule
+python3 launcher.py schedule --on           # 开启（每天 09:00）
+python3 launcher.py schedule --time 08:30   # 改时间
+python3 launcher.py schedule --off          # 关闭
+python3 launcher.py schedule               # 查看状态
 ```
+
+自动检测操作系统，使用对应的定时方案：
+
+| 系统 | 底层实现 | 说明 |
+|------|----------|------|
+| **macOS** | launchd (plist) | 开机自启，系统原生 |
+| **Windows** | 任务计划程序 (schtasks) | 需管理员权限创建 |
+| **Linux** | crontab | 标准 cron job |
+
+> **Windows 注意事项：**
+> - 首次运行 `schedule --on` 可能需要以管理员身份打开终端
+> - Python 命令可能是 `python` 而非 `python3`，根据你的安装情况调整
 
 ---
 
@@ -321,7 +335,8 @@ python3 launcher.py schedule --time HH:MM  # 改时间
 │   └── auto_apply.py        # 自动投递（实验性）
 │
 ├── scripts/
-│   └── setup_schedule.sh    # macOS 定时任务脚本
+│   ├── setup_schedule.sh    # macOS/Linux 定时任务
+│   └── setup_schedule.bat   # Windows 定时任务
 │
 ├── config.yaml              # 你的配置（不提交 git）
 ├── credentials.json         # Gmail 凭据（不提交）
