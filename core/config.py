@@ -1,10 +1,10 @@
 """
 统一配置加载器
 优先级: config.yaml > .env > 默认值
+保存时使用 ruamel.yaml 保留注释，加载时兼容 pyyaml
 """
 
 import os
-import yaml
 from core import PROJECT_ROOT
 
 CONFIG_PATH = PROJECT_ROOT / "config.yaml"
@@ -27,12 +27,38 @@ def _load():
                     os.environ[k.strip()] = v.strip()
 
     if CONFIG_PATH.exists():
+        import yaml
         with open(CONFIG_PATH, encoding="utf-8") as f:
             _config = yaml.safe_load(f) or {}
     else:
         _config = {}
 
     return _config
+
+
+def _save(cfg: dict):
+    """保存配置，优先用 ruamel.yaml 保留注释"""
+    try:
+        from ruamel.yaml import YAML
+        yaml = YAML()
+        yaml.preserve_quotes = True
+        yaml.default_flow_style = False
+        # Load original to preserve comments
+        if CONFIG_PATH.exists():
+            with open(CONFIG_PATH, encoding="utf-8") as f:
+                original = yaml.load(f) or {}
+            # Merge new values into original (preserving comments)
+            for key, value in cfg.items():
+                original[key] = value
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                yaml.dump(original, f)
+        else:
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                yaml.dump(cfg, f)
+    except ImportError:
+        import yaml
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            yaml.dump(cfg, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
 
 
 def get(section: str, key: str, default=""):
@@ -98,5 +124,4 @@ def get_schedule_config() -> dict:
 def save_schedule_config(sched: dict):
     cfg = _load()
     cfg["schedule"] = sched
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        yaml.dump(cfg, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    _save(cfg)

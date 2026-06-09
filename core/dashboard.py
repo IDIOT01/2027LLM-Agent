@@ -135,10 +135,10 @@ def _save_profile(profile: dict):
 
 
 def _save_config_section(section: str, value: dict):
-    with open(CONFIG_PATH, encoding="utf-8") as f:
-        cfg = yaml.safe_load(f) or {}
+    from core.config import _load, _save, _config
+    import core.config as _cfg_mod
+    cfg = _load()
     old = cfg.get(section, {})
-    # Preserve masked sensitive values (don't overwrite real keys with ****)
     def _merge(old_dict, new_dict):
         for k, v in new_dict.items():
             if isinstance(v, str) and "****" in v:
@@ -149,8 +149,37 @@ def _save_config_section(section: str, value: dict):
                 old_dict[k] = v
     _merge(old, value)
     cfg[section] = old
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        yaml.dump(cfg, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    _save(cfg)
+    _cfg_mod._config = None
+
+
+def _apply_schedule(sched: dict):
+    """保存后真正调用系统定时任务"""
+    import subprocess
+    enabled = sched.get("enabled", False)
+    time_str = sched.get("time", "09:00")
+    h, m = time_str.split(":")
+
+    if sys.platform == "win32":
+        if enabled:
+            subprocess.run([str(PROJECT_ROOT / "scripts" / "setup_schedule.bat"), h, m], shell=True, capture_output=True)
+        else:
+            subprocess.run(["schtasks", "/delete", "/tn", "QiuzhaoAgent", "/f"], capture_output=True)
+    elif sys.platform == "darwin":
+        scripts = PROJECT_ROOT / "scripts"
+        if enabled:
+            subprocess.run(["bash", str(scripts / "setup_schedule.sh"), h, m], capture_output=True)
+        else:
+            import os
+            plist = Path.home() / "Library/LaunchAgents" / f"com.{os.environ.get('USER', 'user')}.qiuzhao-agent.plist"
+            subprocess.run(["launchctl", "unload", str(plist)], capture_output=True)
+    else:
+        entry = f"{m} {h} * * * cd {PROJECT_ROOT} && {sys.executable} launcher.py run --lite"
+        if enabled:
+            subprocess.run(f'(crontab -l 2>/dev/null | grep -v "launcher.py"; echo "{entry}") | crontab -', shell=True, capture_output=True)
+        else:
+            subprocess.run('crontab -l 2>/dev/null | grep -v "launcher.py" | crontab -', shell=True, capture_output=True)
+    print(f"[OK] 定时任务{'已启用 '+time_str if enabled else '已关闭'}")
 
 
 def export_html(output_path: Path = None):
@@ -193,6 +222,13 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         elif self.path == "/api/sources":
             from core.sources import get_cookie_status
             self._send_json(get_cookie_status())
+        elif self.path.startswith("/api/jobs"):
+            from core.db import get_all_jobs, get_stats
+            from urllib.parse import urlparse, parse_qs
+            qs = parse_qs(urlparse(self.path).query)
+            status = qs.get("status", [""])[0]
+            company = qs.get("company", [""])[0]
+            self._send_json({"jobs": get_all_jobs(status, company), "stats": get_stats()})
         elif self.path == "/api/report":
             report_dir = DATA_DIR / "每日播报"
             reports = sorted(report_dir.glob("*.md"), reverse=True) if report_dir.exists() else []
@@ -217,6 +253,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 value = body.get("value", {})
                 if section in ("llm", "push", "email", "proxy", "schedule"):
                     _save_config_section(section, value)
+                    if section == "schedule":
+                        _apply_schedule(value)
                     self._send_json({"ok": True})
                 else:
                     self._send_json({"error": f"invalid section: {section}"}, 400)
@@ -239,6 +277,15 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     import traceback
                     traceback.print_exc()
                     self._send_json({"ok": False, "error": str(e)}, 500)
+            elif self.path == "/api/job-status":
+                from core.db import update_job_status
+                job_id = body.get("id")
+                status = body.get("status", "")
+                if job_id and status:
+                    update_job_status(int(job_id), status)
+                    self._send_json({"ok": True})
+                else:
+                    self._send_json({"error": "missing id or status"}, 400)
             elif self.path == "/api/login":
                 platform = body.get("platform", "")
                 import threading

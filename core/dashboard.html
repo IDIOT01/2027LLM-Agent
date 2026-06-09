@@ -128,9 +128,9 @@ input:focus,textarea:focus{outline:none;border-color:#3b82f6}
       <h3>最新抓取岗位</h3>
       <div class="filters">
         <select id="filter-company"><option value="">全部公司</option></select>
-        <select id="filter-source"><option value="">全部来源</option></select>
+        <select id="filter-status"><option value="">全部状态</option><option value="待关注">待关注</option><option value="待投递">待投递</option><option value="已投递">已投递</option><option value="面试中">面试中</option><option value="offer">offer</option><option value="已挂">已挂</option></select>
       </div>
-      <table><thead><tr><th>公司</th><th>岗位</th><th>部门</th><th>来源</th><th>时间</th></tr></thead>
+      <table><thead><tr><th>公司</th><th>岗位</th><th>地点</th><th>状态</th><th>发现时间</th></tr></thead>
       <tbody id="job-table"></tbody></table>
     </div>
     <div class="box"><h3>邮件通知（3天未读）</h3><div id="email-list"><div class="no-data">暂无</div></div></div>
@@ -371,15 +371,8 @@ fetch('/api/data').then(r=>r.json()).then(data=>{
   new Chart(document.getElementById('chart-tier'),{type:'bar',data:{labels:Object.keys(data.tier_dist),datasets:[{data:Object.values(data.tier_dist),backgroundColor:[C.red,C.yellow,C.blue,C.gray],borderRadius:6}]},options:{scales:{y:{beginAtZero:true}},plugins:{legend:{display:false}}}});
   new Chart(document.getElementById('chart-match'),{type:'doughnut',data:{labels:Object.keys(data.match_dist),datasets:[{data:Object.values(data.match_dist),backgroundColor:[C.green,C.yellow,C.red],borderWidth:0}]},options:{cutout:'55%',plugins:{legend:{position:'right'}}}});
 
-  // Job table
-  allJobs=data.jobs;
-  const companies=[...new Set(allJobs.map(j=>j.company))].sort();
-  const sources=[...new Set(allJobs.map(j=>j.source))].sort();
-  const fc=document.getElementById('filter-company'),fs=document.getElementById('filter-source');
-  companies.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;fc.appendChild(o)});
-  sources.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;fs.appendChild(o)});
-  fc.onchange=fs.onchange=renderJobTable;
-  renderJobTable();
+  // Job table - load from DB
+  loadJobsFromDB();
 
   // Emails
   if(data.emails&&data.emails.length>0){
@@ -422,16 +415,48 @@ fetch('/api/data').then(r=>r.json()).then(data=>{
   }
 });
 
+const STATUS_FLOW=['待关注','待投递','已投递','面试中','offer','已挂'];
+const STATUS_COLORS={'待关注':'C','待投递':'B','已投递':'A','面试中':'S','offer':'high','已挂':'low'};
+
+function loadJobsFromDB(){
+  fetch('/api/jobs').then(r=>r.json()).then(d=>{
+    allJobs=d.jobs||[];
+    const companies=[...new Set(allJobs.map(j=>j.company))].sort();
+    const fc=document.getElementById('filter-company');
+    // Keep first option, clear rest
+    while(fc.options.length>1) fc.remove(1);
+    companies.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;fc.appendChild(o)});
+    fc.onchange=renderJobTable;
+    document.getElementById('filter-status').onchange=renderJobTable;
+    renderJobTable();
+  });
+}
+
 function renderJobTable(){
   const fc=document.getElementById('filter-company').value;
-  const fs=document.getElementById('filter-source').value;
-  const filtered=allJobs.filter(j=>(!fc||j.company===fc)&&(!fs||j.source===fs));
-  document.getElementById('job-table').innerHTML=filtered.map(j=>{
-    const url=j.url||'#';
-    const hasUrl=url&&url!=='#'&&url.startsWith('http');
-    const titleHtml=hasUrl?`<a href="${url}" target="_blank">${j.title}</a>`:j.title;
-    return `<tr><td><strong>${j.company}</strong></td><td>${titleHtml}</td><td>${j.department||'-'}</td><td><span class="tag B">${j.source}</span></td><td style="color:#64748b">${(j.scraped_at||'').slice(0,10)}</td></tr>`;
-  }).join('')||'<tr><td colspan="5" class="no-data">无</td></tr>';
+  const fst=document.getElementById('filter-status').value;
+  const filtered=allJobs.filter(j=>(!fc||j.company===fc)&&(!fst||j.status===fst));
+  document.getElementById('job-table').innerHTML=filtered.slice(0,100).map(j=>{
+    const url=j.url||'';
+    const titleHtml=url&&url.startsWith('http')?`<a href="${url}" target="_blank">${j.title}</a>`:j.title;
+    const statusCls=STATUS_COLORS[j.status]||'C';
+    return `<tr>
+      <td><strong>${j.company}</strong></td>
+      <td>${titleHtml}</td>
+      <td>${j.location||'-'}</td>
+      <td><select class="tag ${statusCls}" style="cursor:pointer;padding:2px 6px" onchange="changeStatus(${j.id},this.value)">
+        ${STATUS_FLOW.map(s=>`<option value="${s}"${s===j.status?' selected':''}>${s}</option>`).join('')}
+      </select></td>
+      <td style="color:#64748b;font-size:12px">${(j.first_seen||'').slice(0,10)}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="5" class="no-data">暂无岗位数据，请先点击「立即更新」</td></tr>';
+}
+
+function changeStatus(jobId,newStatus){
+  api('POST','/api/job-status',{id:jobId,status:newStatus}).then(()=>{
+    toast('已更新为: '+newStatus);
+    loadJobsFromDB();
+  });
 }
 
 function renderCompanyTable(){

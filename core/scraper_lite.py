@@ -249,24 +249,25 @@ def run():
             except Exception as e:
                 print(f"  [ERR] {company['name']}: {e}")
 
-    # Save results
+    # Save to DB (dedup) + JSON
+    from core.db import upsert_jobs
+    result = upsert_jobs(all_jobs)
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output = {
         "scraped_at": datetime.now().isoformat(),
         "scraper": "lite",
         "total_jobs": len(all_jobs),
+        "new_jobs": result["new"],
         "jobs": all_jobs
     }
-
     output_path = RESULTS_DIR / f"scrape_{timestamp}.json"
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
-
-    latest_path = RESULTS_DIR / "latest.json"
-    with open(latest_path, "w", encoding="utf-8") as f:
+    with open(RESULTS_DIR / "latest.json", "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
-    print(f"\n[DONE] 共抓取 {len(all_jobs)} 条岗位信息")
+    print(f"\n[DONE] 共抓取 {len(all_jobs)} 条，新增 {result['new']} 条（去重后）")
     print(f"[SAVED] {output_path}")
     return all_jobs
 
