@@ -227,7 +227,26 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         pass
 
 
+def _ensure_init():
+    """首次启动时自动初始化"""
+    import shutil
+    if not CONFIG_PATH.exists():
+        tpl = PROJECT_ROOT / "config.yaml.example"
+        if tpl.exists():
+            shutil.copy(tpl, CONFIG_PATH)
+    for d in ["抓取结果", "每日播报", "email_results", "cookies", "logs"]:
+        (DATA_DIR / d).mkdir(parents=True, exist_ok=True)
+    excel = DATA_DIR / "秋招投递跟踪表.xlsx"
+    if not excel.exists():
+        try:
+            from launcher import _generate_excel
+            _generate_excel()
+        except Exception:
+            pass
+
+
 def serve(port: int = PORT, open_browser: bool = True):
+    _ensure_init()
     server = HTTPServer(("127.0.0.1", port), DashboardHandler)
     url = f"http://127.0.0.1:{port}"
     print(f"[OK] 仪表盘已启动: {url}")
