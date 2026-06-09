@@ -212,15 +212,19 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     self._send_json({"error": f"invalid section: {section}"}, 400)
             elif self.path == "/api/run":
                 try:
-                    # Reset config cache so new API keys take effect
+                    import importlib
                     from core import config as _cfg_mod
                     _cfg_mod._config = None
-                    from core.scraper_lite import run as lite_run
-                    jobs = lite_run()
+                    # Reload scraper_lite to pick up fresh config
+                    import core.scraper_lite as _sl
+                    importlib.reload(_sl)
+                    jobs = _sl.run()
                     from core.report import run as report_run
                     report_run()
                     self._send_json({"ok": True, "jobs": len(jobs)})
                 except Exception as e:
+                    import traceback
+                    traceback.print_exc()
                     self._send_json({"ok": False, "error": str(e)}, 500)
             else:
                 self.send_error(404)

@@ -24,20 +24,28 @@ HEADERS = {
     "Accept-Language": "zh-CN,zh;q=0.9",
 }
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from core.config import get_profile as _get_profile
-_profile = _get_profile()
-KEYWORDS = _profile["keywords"]
-EXCLUDE_KEYWORDS = _profile["exclude_keywords"]
+from core.config import get_profile
+
+
+def _keywords():
+    p = get_profile()
+    return p["keywords"], p["exclude_keywords"]
+
+
+KEYWORDS, EXCLUDE_KEYWORDS = _keywords()
 
 
 def fetch_url(url: str, timeout: int = 15) -> str:
+    import ssl
     try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
         req = urllib.request.Request(url, headers=HEADERS)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
             return resp.read().decode("utf-8", errors="ignore")
     except Exception as e:
+        print(f"  [WARN] 抓取失败 {url[:40]}: {e}")
         return ""
 
 
@@ -160,9 +168,12 @@ def scrape_generic(company: dict) -> list:
 
 
 def run():
+    global KEYWORDS, EXCLUDE_KEYWORDS
+    KEYWORDS, EXCLUDE_KEYWORDS = _keywords()
+
     print(f"[INFO] 轻量级抓取开始 - {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
-    with open(COMPANY_LIST_PATH, "r") as f:
+    with open(COMPANY_LIST_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
     companies = data["companies"]
 

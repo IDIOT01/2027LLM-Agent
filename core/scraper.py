@@ -20,10 +20,13 @@ COMPANY_LIST_PATH = PROJECT_ROOT / "公司清单.json"
 RESULTS_DIR = DATA_DIR / "抓取结果"
 RESULTS_DIR.mkdir(exist_ok=True)
 
-from core.config import get_profile as _get_profile
-_profile = _get_profile()
-KEYWORDS = _profile["keywords"]
-EXCLUDE_KEYWORDS = _profile["exclude_keywords"]
+from core.config import get_profile
+
+def _keywords():
+    p = get_profile()
+    return p["keywords"], p["exclude_keywords"]
+
+KEYWORDS, EXCLUDE_KEYWORDS = _keywords()
 
 
 @dataclass
