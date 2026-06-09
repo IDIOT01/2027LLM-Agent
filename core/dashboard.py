@@ -190,6 +190,13 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.wfile.write(content)
         elif self.path == "/api/data":
             self._send_json(collect_data())
+        elif self.path == "/api/report":
+            report_dir = DATA_DIR / "每日播报"
+            reports = sorted(report_dir.glob("*.md"), reverse=True) if report_dir.exists() else []
+            result = []
+            for r in reports[:10]:
+                result.append({"date": r.stem, "content": r.read_text(encoding="utf-8")})
+            self._send_json({"reports": result})
         else:
             self.send_error(404)
 
@@ -215,7 +222,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     import importlib
                     from core import config as _cfg_mod
                     _cfg_mod._config = None
-                    # Reload scraper_lite to pick up fresh config
+                    # Ensure Excel exists
+                    if not (DATA_DIR / "秋招投递跟踪表.xlsx").exists():
+                        from core.excel import generate
+                        generate()
                     import core.scraper_lite as _sl
                     importlib.reload(_sl)
                     jobs = _sl.run()
@@ -254,10 +264,10 @@ def _ensure_init():
     excel = DATA_DIR / "秋招投递跟踪表.xlsx"
     if not excel.exists():
         try:
-            from launcher import _generate_excel
-            _generate_excel()
-        except Exception:
-            pass
+            from core.excel import generate
+            generate()
+        except Exception as e:
+            print(f"[WARN] Excel生成失败: {e}")
 
 
 def serve(port: int = PORT, open_browser: bool = True):

@@ -56,6 +56,17 @@ input:focus,textarea:focus{outline:none;border-color:#3b82f6}
 .toast{position:fixed;top:20px;right:20px;background:#065f46;color:#34d399;padding:12px 20px;border-radius:8px;font-size:13px;opacity:0;transition:.3s;z-index:999}
 .toast.show{opacity:1}
 .no-data{color:#64748b;font-style:italic;padding:16px;text-align:center}
+.md h1{font-size:20px;color:#60a5fa;margin:16px 0 8px;border-bottom:1px solid #334155;padding-bottom:8px}
+.md h2{font-size:16px;color:#a78bfa;margin:14px 0 6px}
+.md h3{font-size:14px;color:#34d399;margin:10px 0 4px}
+.md p{margin:6px 0}.md ul,.md ol{margin:4px 0 4px 20px}
+.md table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}
+.md th{background:#334155;padding:6px 10px;text-align:left;border:1px solid #475569}
+.md td{padding:6px 10px;border:1px solid #334155}
+.md blockquote{border-left:3px solid #60a5fa;padding:8px 14px;margin:8px 0;background:#1e293b;border-radius:0 6px 6px 0}
+.md code{background:#334155;padding:1px 5px;border-radius:3px;font-size:12px}
+.md hr{border:none;border-top:1px solid #334155;margin:12px 0}
+.md strong{color:#fbbf24}
 .email-item{padding:8px 0;border-bottom:1px solid #334155}.email-item:last-child{border:none}
 @media(max-width:768px){.cards{grid-template-columns:repeat(3,1fr)}.charts{grid-template-columns:1fr}}
 </style>
@@ -73,6 +84,7 @@ input:focus,textarea:focus{outline:none;border-color:#3b82f6}
 <div class="container">
   <div class="tabs">
     <div class="tab active" onclick="switchTab('overview')">总览</div>
+    <div class="tab" onclick="switchTab('report')">每日报告</div>
     <div class="tab" onclick="switchTab('companies')">目标公司</div>
     <div class="tab" onclick="switchTab('profile')">岗位设置</div>
     <div class="tab" onclick="switchTab('settings')">系统配置</div>
@@ -103,6 +115,14 @@ input:focus,textarea:focus{outline:none;border-color:#3b82f6}
       <tbody id="job-table"></tbody></table>
     </div>
     <div class="box"><h3>邮件通知（3天未读）</h3><div id="email-list"><div class="no-data">暂无</div></div></div>
+  </div>
+
+  <!-- ====== 每日报告 ====== -->
+  <div id="panel-report" class="panel">
+    <div class="box">
+      <h3>每日报告 <span><select id="report-select" onchange="showReport(this.value)" style="background:#334155;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:4px 10px;font-size:12px"></select></span></h3>
+      <div id="report-content" style="line-height:1.8;font-size:14px" class="no-data">加载中...</div>
+    </div>
   </div>
 
   <!-- ====== 目标公司 ====== -->
@@ -178,10 +198,51 @@ let DATA={},allJobs=[],allCompanies=[];
 
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
 
+const TAB_MAP={'overview':'总览','report':'每日报告','companies':'目标公司','profile':'岗位设置','settings':'系统配置'};
 function switchTab(name){
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',t.textContent.includes({'overview':'总览','companies':'目标公司','profile':'岗位设置','settings':'系统配置'}[name])));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.textContent===TAB_MAP[name]));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
+  if(name==='report'&&!window._reportsLoaded) loadReports();
+}
+
+let _allReports=[];
+function loadReports(){
+  window._reportsLoaded=true;
+  fetch('/api/report').then(r=>r.json()).then(d=>{
+    _allReports=d.reports||[];
+    const sel=document.getElementById('report-select');
+    sel.innerHTML='';
+    _allReports.forEach((r,i)=>{const o=document.createElement('option');o.value=i;o.textContent=r.date;sel.appendChild(o);});
+    if(_allReports.length) showReport(0);
+    else document.getElementById('report-content').innerHTML='<div class="no-data">暂无报告，请先点击"立即更新"</div>';
+  });
+}
+function showReport(idx){
+  const r=_allReports[idx];
+  if(!r) return;
+  document.getElementById('report-content').innerHTML='<div class="md">'+mdToHtml(r.content)+'</div>';
+}
+function mdToHtml(md){
+  return md
+    .replace(/^### (.*$)/gm,'<h3>$1</h3>')
+    .replace(/^## (.*$)/gm,'<h2>$1</h2>')
+    .replace(/^# (.*$)/gm,'<h1>$1</h1>')
+    .replace(/^\> (.*$)/gm,'<blockquote>$1</blockquote>')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^\- (.*$)/gm,'<li>$1</li>')
+    .replace(/^(\d+)\. (.*$)/gm,'<li>$2</li>')
+    .replace(/\n{2,}/g,'<br><br>')
+    .replace(/\|(.+)\|/g,function(match){
+      const cells=match.split('|').filter(c=>c.trim());
+      if(cells.every(c=>/^[\s\-:]+$/.test(c))) return '';
+      const tag=cells.some(c=>/^[\s\-:]+$/.test(c))?'td':'td';
+      return '<tr>'+cells.map(c=>'<'+tag+'>'+c.trim()+'</'+tag+'>').join('')+'</tr>';
+    })
+    .replace(/(<tr>.*<\/tr>\n?)+/g,'<table>$&</table>')
+    .replace(/^---$/gm,'<hr>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\n/g,'<br>');
 }
 
 function api(method,path,body){
